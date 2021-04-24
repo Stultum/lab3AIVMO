@@ -27,18 +27,18 @@ class Foggel(
             this.providersCount++
             val tmpList = mutableListOf<Int>()
             repeat(consumersCount) {
-                tmpList.add(0)
+                tmpList.add(99999)
             }
             this.transportList.add(tmpList)
             this.stocksList.add(this.needList.sum() - this.stocksList.sum())
         } else if (this.stocksList.sum() > this.needList.sum()) {
             this.consumersCount++
             this.transportList.forEachIndexed { _, mutableList ->
-                mutableList.add(0)
+                mutableList.add(99999)
             }
             this.needList.add(this.stocksList.sum() - this.needList.sum())
         }
-        printData()
+        //printData()
     }
 
     private fun printData() {
@@ -69,12 +69,55 @@ class Foggel(
             }
             println(maxValue)
 
+            transportList.forEachIndexed { index, mutableList ->
+                mutableList.forEachIndexed { _, i ->
+                    if (i == 99999) {
+                        print(" - ")
+                    } else {
+                        print(" $i ")
+                    }
+                }
+                print(" ${stocksList[index]} ")
+                print(" ${diffs.second[index]}")
+                print("\n")
+            }
+            println(needList)
+            println(diffs.first)
+            print("\n")
+
+            if (diffs.first.isContainsOnlyZeros() &&
+                diffs.second.isContainsOnlyZeros() &&
+                stocksList.zerosCount() == providersCount - 1 &&
+                needList.zerosCount() == consumersCount - 1
+            ) {
+                var firstIndex = 0
+                var secondIndex = 0
+                stocksList.forEachIndexed { index, i ->
+                    if (i != 0) {
+                        firstIndex = index
+                    }
+                }
+                needList.forEachIndexed { index, i ->
+                    if (i != 0) {
+                        secondIndex = index
+                    }
+                }
+                val resultCords = Pair(firstIndex, secondIndex)
+                val resultValues = Pair(0, stocksList[firstIndex])
+                resultList.add(Pair(resultCords, resultValues))
+                stocksList[firstIndex] = 0
+                needList[secondIndex] = 0
+            }
+
             val stock = stocksList[fromStock]
             val need = needList[forNeed]
             when {
                 stock > need -> {
                     val resultCords = Pair(fromStock, forNeed)
-                    val resultValues = Pair(transportList[fromStock][forNeed], needList[forNeed])
+                    val resultValues = if (transportList[fromStock][forNeed] != 99999)
+                        Pair(transportList[fromStock][forNeed], needList[forNeed])
+                    else
+                        Pair(0, needList[forNeed])
                     resultList.add(Pair(resultCords, resultValues))
                     transportList.forEachIndexed { _, mutableList ->
                         mutableList[forNeed] = 99999
@@ -84,7 +127,10 @@ class Foggel(
                 }
                 need > stock -> {
                     val resultCords = Pair(fromStock, forNeed)
-                    val resultValues = Pair(transportList[fromStock][forNeed], stocksList[fromStock])
+                    val resultValues = if (transportList[fromStock][forNeed] != 99999)
+                        Pair(transportList[fromStock][forNeed], stocksList[fromStock])
+                    else
+                        Pair(0, needList[fromStock])
                     resultList.add(Pair(resultCords, resultValues))
                     transportList[fromStock].forEachIndexed { index, _ ->
                         transportList[fromStock][index] = 99999
@@ -94,28 +140,44 @@ class Foggel(
                 }
                 stock == need -> {
                     val resultCords = Pair(fromStock, forNeed)
-                    val resultValues = Pair(transportList[fromStock][forNeed], needList[forNeed])
-                    resultList.add(Pair(resultCords, resultValues))
+                    val resultValues = if (transportList[fromStock][forNeed] != 99999)
+                        Pair(transportList[fromStock][forNeed], needList[forNeed])
+                    else
+                        Pair(0, needList[forNeed])
+                    if (resultValues.first != 0 && resultValues.second != 0) {
+                        resultList.add(Pair(resultCords, resultValues))
+                    }
                     stocksList[fromStock] = 0
                     needList[forNeed] = 0
-                }
-            }
-            transportList.forEachIndexed { index, mutableList ->
-                mutableList.forEachIndexed { _, i ->
-                    if (i == 99999) {
-                        print(" - ")
-                    } else {
-                        print(" $i ")
+                    transportList.forEachIndexed { _, mutableList ->
+                        mutableList[forNeed] = 99999
+                    }
+                    transportList[fromStock].forEachIndexed { index, _ ->
+                        transportList[fromStock][index] = 99999
                     }
                 }
-                print("\n")
             }
         }
         var result = 0
-        resultList.forEachIndexed { index, pair ->
+        resultList.forEachIndexed { _, pair ->
             val tmp = pair.second
             result += tmp.second * tmp.first
             println(tmp)
+        }
+        resultList.forEachIndexed { index, pair ->
+            val row = pair.first.first
+            val col = pair.first.second
+            transportList[row][col] = index
+        }
+        transportList.forEachIndexed { _, mutableList ->
+            mutableList.forEachIndexed { _, i ->
+                if (i != 99999) {
+                    print(" ${resultList[i].second} ")
+                } else {
+                    print(" ---- ")
+                }
+            }
+            print("\n")
         }
         println("result = $result")
     }
@@ -147,6 +209,12 @@ class Foggel(
         copyList.addAll(this)
         copyList.remove(firstMin)
         val secondMin = copyList.minOrNull()
+        if (firstMin == 99999) {
+            return Pair(secondMin!!, secondMin)
+        }
+        if (secondMin == 99999) {
+            return Pair(firstMin!!, firstMin)
+        }
         return Pair(firstMin!!, secondMin!!)
     }
 
@@ -168,7 +236,7 @@ class Foggel(
                 secondMaxIndex = index
             }
         }
-        return if (firstMax >= secondMax)
+        return if (firstMax > secondMax)
             Triple(firstMax, firstMaxIndex, MAX_IN_COLUMNS)
         else
             Triple(secondMax, secondMaxIndex, MAX_IN_ROWS)
@@ -194,5 +262,14 @@ class Foggel(
         }
 
         return minIndex
+    }
+
+    private fun MutableList<Int>.zerosCount(): Int {
+        var count = 0
+        forEachIndexed { index, i ->
+            if (i == 0)
+                count++
+        }
+        return count
     }
 }

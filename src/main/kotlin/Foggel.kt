@@ -23,6 +23,21 @@ class Foggel(
         this.stocksList = stocksList
         this.providersCount = providersCount
         this.consumersCount = consumersCount
+        if (this.needList.sum() > this.stocksList.sum()) {
+            this.providersCount++
+            val tmpList = mutableListOf<Int>()
+            repeat(consumersCount) {
+                tmpList.add(0)
+            }
+            this.transportList.add(tmpList)
+            this.stocksList.add(this.needList.sum() - this.stocksList.sum())
+        } else if (this.stocksList.sum() > this.needList.sum()) {
+            this.consumersCount++
+            this.transportList.forEachIndexed { _, mutableList ->
+                mutableList.add(0)
+            }
+            this.needList.add(this.stocksList.sum() - this.needList.sum())
+        }
         printData()
     }
 

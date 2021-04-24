@@ -50,9 +50,74 @@ class Foggel(
     }
 
     fun countFoggel() {
-        val diffs = transportList.getDifferences()
-        val maxValue = diffs.getMax()
-        println(maxValue)
+        val resultList = mutableListOf<Pair<Pair<Int, Int>, Pair<Int, Int>>>()
+        while (!needList.isContainsOnlyZeros() && !stocksList.isContainsOnlyZeros()) {
+            val diffs = transportList.getDifferences()
+            val maxValue = diffs.getMax()
+            var fromStock = 0
+            var forNeed = 0
+            if (maxValue.third == MAX_IN_ROWS) {
+                fromStock = maxValue.second
+                forNeed = transportList[fromStock].getMinIndex()
+            } else if (maxValue.third == MAX_IN_COLUMNS) {
+                forNeed = maxValue.second
+                val tmp = mutableListOf<Int>()
+                transportList.forEachIndexed { _, mutableList ->
+                    tmp.add(mutableList[forNeed])
+                }
+                fromStock = tmp.getMinIndex()
+            }
+            println(maxValue)
+
+            val stock = stocksList[fromStock]
+            val need = needList[forNeed]
+            when {
+                stock > need -> {
+                    val resultCords = Pair(fromStock, forNeed)
+                    val resultValues = Pair(transportList[fromStock][forNeed], needList[forNeed])
+                    resultList.add(Pair(resultCords, resultValues))
+                    transportList.forEachIndexed { _, mutableList ->
+                        mutableList[forNeed] = 99999
+                    }
+                    needList[forNeed] = 0
+                    stocksList[fromStock] = stock - need
+                }
+                need > stock -> {
+                    val resultCords = Pair(fromStock, forNeed)
+                    val resultValues = Pair(transportList[fromStock][forNeed], stocksList[fromStock])
+                    resultList.add(Pair(resultCords, resultValues))
+                    transportList[fromStock].forEachIndexed { index, _ ->
+                        transportList[fromStock][index] = 99999
+                    }
+                    stocksList[fromStock] = 0
+                    needList[forNeed] = need - stock
+                }
+                stock == need -> {
+                    val resultCords = Pair(fromStock, forNeed)
+                    val resultValues = Pair(transportList[fromStock][forNeed], needList[forNeed])
+                    resultList.add(Pair(resultCords, resultValues))
+                    stocksList[fromStock] = 0
+                    needList[forNeed] = 0
+                }
+            }
+            transportList.forEachIndexed { index, mutableList ->
+                mutableList.forEachIndexed { _, i ->
+                    if (i == 99999) {
+                        print(" - ")
+                    } else {
+                        print(" $i ")
+                    }
+                }
+                print("\n")
+            }
+        }
+        var result = 0
+        resultList.forEachIndexed { index, pair ->
+            val tmp = pair.second
+            result += tmp.second * tmp.first
+            println(tmp)
+        }
+        println("result = $result")
     }
 
     private fun MutableList<MutableList<Int>>.getDifferences(): Pair<MutableList<Int>, MutableList<Int>> {
@@ -92,13 +157,13 @@ class Foggel(
         var secondMaxIndex = 0
 
         first.forEachIndexed { index, i ->
-            if (i > firstMax) {
+            if (i >= firstMax) {
                 firstMax = i
                 firstMaxIndex = index
             }
         }
         second.forEachIndexed { index, i ->
-            if (i > secondMax) {
+            if (i >= secondMax) {
                 secondMax = i
                 secondMaxIndex = index
             }
@@ -107,5 +172,27 @@ class Foggel(
             Triple(firstMax, firstMaxIndex, MAX_IN_COLUMNS)
         else
             Triple(secondMax, secondMaxIndex, MAX_IN_ROWS)
+    }
+
+    private fun MutableList<Int>.isContainsOnlyZeros(): Boolean {
+        forEachIndexed { _, i ->
+            if (i != 0) {
+                return false
+            }
+        }
+        return true
+    }
+
+    private fun MutableList<Int>.getMinIndex(): Int {
+        var minValue = 99999
+        var minIndex = 0
+        forEachIndexed { index, i ->
+            if (i < minValue) {
+                minValue = i
+                minIndex = index
+            }
+        }
+
+        return minIndex
     }
 }
